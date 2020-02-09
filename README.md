@@ -6,6 +6,11 @@ In an effort to curb the emerging societal threat of DeepFakes (AI manipulated m
 
 ## Setup
 
+Packages used:
+- Data Science: numpy, pandas
+- Plotting: matplotlib, seaborn
+- Machine Learning: keras
+
 conda create -n keras-gpu python=3.6 numpy scipy keras-gpu
 
 ## Dataset
