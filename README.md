@@ -14,3 +14,5 @@ Packages used:
 conda create -n keras-gpu python=3.6 numpy scipy keras-gpu
 
 ## Dataset
+
+Due to computational limitations, I made use of pre-processed data which consisted of 160x160 resolution images of isolated faces from the original videos. Credits goes to _ for generating this dataset - information about the workflow involved in their pre-processing can be found at _.  
