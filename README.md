@@ -4,6 +4,10 @@
 
 In an effort to curb the emerging societal threat of DeepFakes (AI manipulated media), a challenge was built in collaboration between Amazon, Facebook, Microsoft and Partnership on AI to invite enthusiasts of all backgrounds to compete for the best performing DeepFake detection model (https://www.kaggle.com/c/deepfake-detection-challenge/overview).
 
+What are DeepFakes, you ask? Take a look at this GIF. Which one do you think is the original clip?
+
+![](https://github.com/sdlee94/BrainStation_Capstone/blob/master/deepfake.gif)
+
 Upon proposing this challenge as my BrainStation Data Science Capstone project, I was warned that the scope of this endeavor may be too difficult and beyond anything we covered in class. To which I thought 'sounds like the perfect project for me!'.
 
 
