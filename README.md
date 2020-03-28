@@ -40,19 +40,35 @@ The dataset was split into several parts, with a zip file containing a variable 
 
 `cat data/metadata*.csv > data/metadata.csv`
 
-## Data Cleaning
+Important aspects of this dataset (relevance explained later):
+- Imbalanced classes: ~88% labeled **Fake**, ~12% labeled **Real**
+- Multiple fakes derived from each original
+
+## Exploratory Data Analysis and Data Cleaning
 ---
 
 ### Filtering Based on Number of Frames  
 
-Based on the original dataset comprising of videos that are all 10 seconds long at 30 FPS, I should expect the pre-processed dataset to consist of 300 images or frames of faces for each video. From browsing the pre-processed data, I encountered cases where frames misidentified as faces were present and cases with more than 1 face per frame (video featured more than 1 actor). I thus investigated the number of frames across the dataset. Video filenames and their number of frames was obtained using a bash script [**get_n_frames.sh**](https://github.com/sdlee94/BrainStation_Capstone/blob/master/get_n_frames.sh) and written into a csv file (**n_frames.csv**).
+Based on the original dataset comprising of videos that are all 10 seconds long at 30 FPS, I should expect the pre-processed dataset to consist of 300 images or frames of faces for each video. From browsing the pre-processed data, I encountered cases where frames misidentified as faces were present and cases with more than 1 face per frame (video featured more than 1 actor). I thus investigated the number of frames across the dataset. Video filenames and their number of frames was obtained using a bash script [**get_n_frames.sh**](https://github.com/sdlee94/BrainStation_Capstone/blob/master/get_n_frames.sh) and written into a csv file (**n_frames.csv**). The distribution of frame numbers was then plotted using Seaborn (see [notebook](https://github.com/sdlee94/BrainStation_Capstone/blob/master/Data%20Cleaning.ipynb))
 
 <p align="center">
   <img src="https://github.com/sdlee94/BrainStation_Capstone/blob/master/figs/n_frames_hist.png"/>
   <br/>
 </p>  
 
-> We can see that the majority of the dataset have around 300 frames, as expected. There is also a peak around 600 frames which comprise of videos with 2 actors. I decided to just keep the videos with between 200-400 frames since most of my data fall within this range. This is to help eliminate outliers and simplify things later when I extract frames from each video.  
+> There is some variability in the number of frames that were extracted from each video, with the majority of extracted frames falling between 200 and 400. There is also a noticeable group around 600 frames - these must be the videos that featured 2 actors.  
+
+Some explanations on why some videos had differing frame numbers are as follows: the ones with more frames had extra ones due to misidentified faces during pre-processing while the ones with less frames may had gaps in the video in which the actor's face was not detectable (e.g. actor may have turned their head or moved out of view) These factors can pose problems during classification since these extra frames or gaps would result in an inconsistent sequence of images. So I removed these 'outliers' and kept just the videos with between 200 and 400 frames since most of my data were within this range (see [notebook](https://github.com/sdlee94/BrainStation_Capstone/blob/master/Data%20Cleaning.ipynb)). Outlier names were exported as `n_frame_outliers.txt` and then used to move the matching directories into an archive folder:
+
+`xargs -a n_frame_outliers.txt mv -t data/archived/n_frame_outliers`
+
+> If the above returns `mv: cannot stat '<path>'$'\r': No such file or directory`, run `tr -d '\r' <n_frame_outliers.txt >n_frame_outliers_new.txt && mv n_frame_outliers_new.txt n_frame_outliers.txt`
+
+After this filtering steps, 8,537 videos remained in my dataset.
+
+### Extracting 30 Frames per video
+
+Since I used keras models which takes a non-variable input shape, I needed all of my videos to have the same number of frames. I also considered whether 300 frames per second is necessary, as many frames will be nearly identical. With my limited resources in time and computation, I rationalized that reducing down to 3 Frames per second (30 frames per video) was a reasonable idea.
 
 ## Building Deep Learning Models for DeepFake detection
 ---
