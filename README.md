@@ -48,7 +48,7 @@ The dataset was split into several parts, with a zip file containing a variable 
 Based on the original dataset comprising of videos that are all 10 seconds long at 30 FPS, I should expect the pre-processed dataset to consist of 300 images or frames of faces for each video. From browsing the pre-processed data, I encountered cases where frames misidentified as faces were present and cases with more than 1 face per frame (video featured more than 1 actor). I thus investigated the number of frames across the dataset. Video filenames and their number of frames was obtained using a bash script [**get_n_frames.sh**](https://github.com/sdlee94/BrainStation_Capstone/blob/master/get_n_frames.sh) and written into a csv file (**n_frames.csv**).
 
 <p align="center">
-  <img src="https://github.com/sdlee94/BrainStation_Capstone/figs/n_frames_hist.png"/>
+  <img src="https://github.com/sdlee94/BrainStation_Capstone/tree/master/figs/n_frames_hist.png"/>
   <br/>
 </p>  
 
