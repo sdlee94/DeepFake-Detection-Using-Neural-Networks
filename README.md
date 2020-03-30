@@ -15,7 +15,7 @@ Difficult, right? Especially if you don't know what movie this is from. Did you 
 
 ### DeepFake Detection Challenge  
 
-In an effort to curb the emerging threat of DeepFakes, a [**Kaggle competition**](https://www.kaggle.com/c/deepfake-detection-challenge/overview) was built in collaboration between Amazon, Facebook, Microsoft and Partnership on AI to invite enthusiasts of all backgrounds to compete for the best performing DeepFake detection model. As someone who loves challenging problems and has genuine concerns about DeepFakes, I chose to tackle this challenge for my capstone project. Over the course of ~7 weeks I performed an end-to-end Data Science workflow in which I obtained data, processed it and trained several deep learning models to differentiate between real and fake videos. To date, my best model achieved **96% precision** (of all predicted fakes, 96% were indeed fake) and **83% specificity** (able to correctly identify 83% of real videos) using just a single frame per video. Below details the tools used for this project and an overview of the steps I took to get there!
+In an effort to curb the emerging threat of DeepFakes, a [**Kaggle competition**](https://www.kaggle.com/c/deepfake-detection-challenge/overview) was built in collaboration between Amazon, Facebook, Microsoft and Partnership on AI to invite enthusiasts of all backgrounds to compete for the best performing DeepFake detection model. As someone who loves challenging problems and has genuine concerns about DeepFakes, I chose to tackle this challenge for my capstone project. Over the course of ~7 weeks I performed an end-to-end Data Science workflow in which I obtained data, processed it and trained several deep learning models to differentiate between real and fake videos. To date, my best model achieved **96% precision** (of all predicted fakes, 96% were indeed fake) and **83% specificity** (able to correctly identify 83% of real videos) using just a single frame per video. Below summarizes the tools used for this project and the steps I took to get there!
 
 ## Resources
 ---
@@ -58,9 +58,9 @@ Based on the original dataset comprising of videos that are all 10 seconds long 
 
 > There is some variability in the number of frames that were extracted from each video, with the majority of extracted frames falling between 200 and 400. There is also a noticeable group around 600 frames - these must be the videos that featured 2 actors.  
 
-Some explanations on why some videos had differing frame numbers are as follows: the ones with more frames had extra ones due to misidentified faces during pre-processing while the ones with less frames may had gaps in the video in which the actor's face was not detectable (e.g. actor may have turned their head or moved out of view) These factors can pose problems during classification since these extra frames or gaps would result in an inconsistent sequence of images. So I removed these 'outliers' and kept just the videos with between 200 and 400 frames since most of my data were within this range (see [notebook](https://github.com/sdlee94/BrainStation_Capstone/blob/master/Data%20Cleaning.ipynb)). Outlier names were exported as `n_frame_outliers.txt` and then used to move the matching directories into an archive folder:
+Some explanations on why some videos had differing frame numbers are as follows: the ones with more frames had extra ones due to misidentified faces during pre-processing while the ones with less frames may had gaps in the video in which the actor's face was not detectable (e.g. actor may have turned their head or moved out of view) These factors can pose problems during classification since these extra frames or gaps would result in an inconsistent sequence of images. So I removed these 'outliers' and kept just the videos with between 200 and 400 frames since most of my data were within this range (see [notebook](https://github.com/sdlee94/BrainStation_Capstone/blob/master/Data%20Cleaning.ipynb)). Outlier names were exported as `n_frame_outliers.txt` and then used to move the matching directories into an archive folder:  
 
-`xargs -a n_frame_outliers.txt mv -t data/archived/n_frame_outliers`
+`xargs -a n_frame_outliers.txt mv -t data/archived/n_frame_outliers`  
 
 > If the above returns `mv: cannot stat '<path>'$'\r': No such file or directory`, run `tr -d '\r' <n_frame_outliers.txt >n_frame_outliers_new.txt && mv n_frame_outliers_new.txt n_frame_outliers.txt`
 
@@ -68,17 +68,65 @@ After this filtering steps, 8,537 videos remained in my dataset.
 
 ### Extracting 30 Frames per video
 
-Since I used keras models which takes a non-variable input shape, I needed all of my videos to have the same number of frames. I also considered whether 300 frames per second is necessary, as many frames will be nearly identical. With my limited resources in time and computation, I rationalized that reducing down to 3 Frames per second (30 frames per video) was a reasonable idea.
+Since I used keras models which takes a non-variable input shape, I needed all of my videos to have the same number of frames. I also considered whether 300 frames per second is necessary, since many frames were nearly identical. With my limited resources in time and computation, I rationalized that reducing down to 3 Frames per second (30 frames per video) was a reasonable idea. Using a [Bash script](https://github.com/sdlee94/BrainStation_Capstone/blob/master/reduce_frames.sh), I extracted every 10th frame per video up to 30 frames. I also skipped frames that had multiple 'faces' to avoid misidentified frames.
+
+### Train-Validation-Test Split
+
+The fact that there are multiple fake videos derived from each original video presents a concern regarding the train-test split. If I were to perform random stratification, videos derived from the same original would be present in both training and validation/testing sets. This is an issue because the similarity between videos originating from the same source may bias the model such that it may be able to classify a video more easily if it has learned from related videos during training. Hence, I ensured that each original plus their derivatives were not separated during stratification. See [**here**](https://github.com/sdlee94/BrainStation_Capstone/blob/master/Data%20Cleaning.ipynb) for relevant code. 20% of my data (n=1,568) went into the test set, and the remaining were split 80/20 into the training (n=5,585) and validation (n=1,384) sets, respectively.
 
 ## Building Deep Learning Models for DeepFake detection
 ---
 
+Once all of the cleaning steps were done, I uploaded my data onto my Google Drive so that I could access it from Google Colab. Neural networks for DeepFake detection were made and trained in a [**Colab notebook**](https://colab.research.google.com/drive/1Ws04sKr2gqmCjVfiMg8DkubP0renW8OL#scrollTo=UnlVvKJFWgKo) with GPU as the runtime type. Models were trained for 50 epochs unless specified otherwise. **ModelCheckpoint** was also used to save the parameters that resulted in the best performance (lowest validation loss).
 
 ### Detection using a custom CNN with 1 Frame per Video
 
+To get a baseline performance, I first framed this as an image classification problem by training models on just the 15th frame (the middle frame) for each video. The first model I used was a custom **Convolutional Neural Network (CNN)** with a relatively simple architecture of 6 convolutional layers, 3 pooling layers and 2 dense layers (not including output):
+
+<p align="center">
+  <img src="https://github.com/sdlee94/BrainStation_Capstone/blob/master/figs/Custom%20CNN.png"/>
+  <br/>
+</p>  
+
+However, this model did not appear to be able to learn during training. As seen in the figure below, the training and validation loss remained static, at least for the first 20 epochs. The training and validation accuracy also did not appear to improve, the model appeared to flip between predicting everything as fake (~88% accuracy) or real (~12% accuracy) on the validation set. Adjusting the learning rate did not appear to change this tendency.
+
+<p align="center">
+  <img src="https://github.com/sdlee94/BrainStation_Capstone/blob/master/figs/Custom%20CNN%20History.png"/>
+  <br/>
+</p>  
+
+This model performed with an ~88% accuracy on the test set, but with a specificity (proportion of correctly classified real videos) of zero. Again, this model predicted every test video as fake. Another negative indication was its **ROC AUC** score of 0.5 (equivalent to random guessing). I took this as a sign that I needed deeper and more complex models. So, I sought to apply **transfer learning** on pre-trained ImageNet models that are available in the Keras package.
+
 ### Detection using Transfer Learning with 1 Frame per Video
+
+Keras has several built-in deep learning models that have been trained on millions of images from the [ImageNet dataset](http://www.image-net.org/). To apply transfer learning, I imported these models and modified the input shape and output layer to conform to my data. I also appended two dense layers before the output layer so that these models could learn aspects about my data:
+
+<p align="center">
+  <img src="https://github.com/sdlee94/BrainStation_Capstone/blob/master/figs/Transfer%20Learning%20CNN.png"/>
+  <br/>
+</p>  
+
+I noticed that these models tended to show signs of overfitting. While the training loss and accuracy appeared to improve as training progressed, the validation loss and accuracy did not, as illustrated below.
+
+<p align="center">
+  <img src="https://github.com/sdlee94/BrainStation_Capstone/blob/master/figs/Transfer%20Learning%20CNN%20History.png"/>
+  <br/>
+</p>  
+
+Still, these models were at least learning something. After trying several different built-in models, I was able to train one that achieved a **precision** of 0.96 (96% of predicted fakes were indeed fake) and a **specificity** of 0.83 (correctly identified 83% of real videos)! However, this came at the tradeoff of a high false negative rate or low recall of 0.58 (only 58% of fake videos were correctly identified). Moreover, the ROC AUC score was 0.71, indicating that there remained much room for improvement.
 
 ### Detection using Time Distributed CNN + Recurrent NN with 30 Frames per video
 
-## Project Summary
+Next step involves moving beyond image classification to video classification. For this, I apply the **Time Distribution** functionality around the built-in models and pass it to a **recurrent LSTM layer**:
+
+<p align="center">
+  <img src="https://github.com/sdlee94/BrainStation_Capstone/blob/master/figs/Transfer%20Learning%20TD%20CNN%2BRNN.png"/>
+  <br/>
+</p>
+
+The idea here is that the convolutions are applied on each frame individually and then consolidated into the LSTM layers which takes into account the temporal sequence of the frames. However, with the time limit on free GPU usage on Google Colab, I could not train these models beyond 20 epochs. Of the few that I've tried training, signs of overfitting were evident as well - so far I did not obtain a model that outperformed my best one using 1 frame per video, adjustments to the recurrent layers or training for more epochs could help in the future.
+
+## Concluding Remarks
 ---
+
+Considering the potentially enormous ramifications of malicious DeepFakes, my best performing model remains far from ideal. While false negatives (fakes misidentified as real) are perhaps more damaging than false positives (real videos misidentified as fake), minimization of both are incredibly important for the overarching goal of differentiating between authentic versus doctored media. (**Generative Adversarial Networks**)[https://interestingengineering.com/generative-adversarial-networks-the-tech-behind-deepfake-and-faceapp] which are deep learning frameworks in which two networks (one for generating fakes and one for detection) compete against each other in a kind of evolutionary arms race, remain at the forefront of AI methodologies for DeepFake generation and detection. Future steps could explore GANs or other cutting edge AI frameworks to arrive at a more robust model.
